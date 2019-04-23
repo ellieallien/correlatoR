@@ -1,0 +1,71 @@
+---
+title: "Logit_regressions_BGD"
+author: "ElioraH"
+date: "18 April 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r function set-up}
+rm(list = ls())
+dataset <- read.csv("./data_for_YANNICK.csv", stringsAsFactors = F)
+regressions <- read.csv("./Regressions.csv", stringsAsFactors = F)
+library(hypegrammaR)
+library(magrittr)
+library(dplyr)
+library(survey)
+
+design <- svydesign(~0, data = dataset) ## ignore, this is how our cleaning checks are set up
+
+dataset[dataset == "yes"] <- 1
+dataset[dataset == "no"] <- 0
+dataset[dataset == "dont_know"] <- NA
+
+
+model_logistic_regression <- function(dependent.var,
+                                      independent.var1,
+                                      independent.var2 = NULL,
+                                      data){
+  
+  data <- data[!is.na(dataset[[dependent.var]]),]
+  dataset <- data[!is.na(data[[independent.var1]]),]
+  
+  design <- svydesign(~0, data = dataset) 
+  
+  dependent_more_than_1 <- length(unique(design$variables[[dependent.var]])) > 1
+  dependent_binary <- length(!is.na(as.logical(design$variables[[dependent.var]]))) == length(!is.na(design$variables[[dependent.var]]))
+  
+  if(!(dependent_more_than_1 & dependent_binary)){
+    results <- list()}else{
+      
+      design$variables[[dependent.var]] <- as.numeric(as.character(design$variables[[dependent.var]]))
+      
+      if(!is.null(independent.var2)){
+      formula_string <- paste0(dependent.var,"~", independent.var1, "*", independent.var2, sep = "")  
+      }else{
+      formula_string <- paste0(dependent.var,"~", independent.var1, sep = "")}
+      test <- svyglm(as.formula(formula_string), design, family=quasibinomial)
+      summary <- summary(test)
+      results <- list()
+      ## this needs to macth the format for the other ones
+      ## coefficient to be interpreted suuuper carefully
+      results$result <- data.frame(summary$coefficients)
+    }
+  return(results)
+}
+```
+
+Trying it out with one line of code
+```{r setup, echo=T}
+
+
+line <- regressions[3,]
+
+
+model_logistic_regression(line$Dependent.variable, line$Independent.variable.1, line$Independent.variable.2, dataset)
+
+
+```
